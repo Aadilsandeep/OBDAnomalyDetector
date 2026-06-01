@@ -18,3 +18,13 @@ build/
 
 *.joblib
 .vscode/
+
+# Processed data
+data/processed/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
