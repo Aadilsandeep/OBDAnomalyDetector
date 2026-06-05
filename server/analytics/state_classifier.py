@@ -45,7 +45,7 @@ from typing import Final
 
 import pandas as pd
 
-from analytics.state_definitions import (
+from server.analytics.state_definitions import (
     ACCEL_RPM_DELTA,
     ACCEL_SPEED_DELTA,
     CRUISE_SPEED_MIN,
@@ -77,7 +77,11 @@ _COL_SPEED_DELTA: Final[str] = "speed_delta"
 _COL_RPM_DELTA: Final[str] = "rpm_delta"
 
 # Minimum required input columns
-_REQUIRED_COLUMNS: Final[frozenset[str]] = frozenset({"speed", "rpm"})
+_REQUIRED_COLUMNS: Final[frozenset[str]] = frozenset({
+    "session_id",
+    "speed",
+    "rpm",
+})
 
 
 # ---------------------------------------------------------------------------
@@ -220,9 +224,13 @@ def _validate_input(df: pd.DataFrame) -> None:
 def _create_derived_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add ``speed_delta`` and ``rpm_delta`` columns to *df*.
 
-    Both are computed via :meth:`pandas.Series.diff` (row-to-row difference).
-    The first row of each column will be ``NaN``; these rows will fall through
-    to the *Traffic* fallback, which is the safest default.
+    Both are computed independently within each driving session using:
+
+    groupby("session_id").diff()
+
+    This prevents artificial acceleration/deceleration events from being
+    generated at session boundaries when multiple trips are merged into a
+    single master dataset.
 
     These columns are intentionally kept in the returned DataFrame so that
     downstream analytics modules (e.g. smoothing, anomaly detection) can
@@ -238,8 +246,15 @@ def _create_derived_features(df: pd.DataFrame) -> pd.DataFrame:
     pandas.DataFrame
         The same DataFrame with ``speed_delta`` and ``rpm_delta`` appended.
     """
-    df[_COL_SPEED_DELTA] = df["speed"].diff()
-    df[_COL_RPM_DELTA] = df["rpm"].diff()
+    df[_COL_SPEED_DELTA] = (
+    df.groupby("session_id")["speed"]
+      .diff()
+)
+
+    df[_COL_RPM_DELTA] = (
+        df.groupby("session_id")["rpm"]
+        .diff()
+    )
 
     logger.debug(
         "Derived features created — speed_delta range [%.2f, %.2f], "
