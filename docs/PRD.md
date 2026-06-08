@@ -1,647 +1,496 @@
 # Product Requirements Document (PRD)
 
-## Project Title
+# AutoAssist – OBD-II Vehicle Health Monitoring & Anomaly Detection Platform
 
-AutoAssist: Intelligent OBD-II Vehicle Telemetry Anomaly Detection and Health Monitoring Platform
+## Version
 
----
+2.0
 
-# 1. Executive Summary
+## Status
 
-AutoAssist is an automotive analytics platform designed to analyze OBD-II vehicle telemetry data and identify abnormal operating behavior using a combination of automotive diagnostic principles, telemetry analytics, and machine learning.
-
-The system processes vehicle sensor streams, learns normal operating patterns, detects anomalous behavior, and presents vehicle health insights through an interactive dashboard.
-
-The platform focuses on offline analysis of recorded OBD-II telemetry datasets while maintaining a scalable architecture capable of supporting future real-time telemetry ingestion from OBD-II adapters and connected vehicle systems.
-
-The objective is not to replace OEM diagnostics or ECU fault detection systems, but to provide an intelligent telemetry analysis layer capable of identifying unusual operating patterns, emerging degradation trends, and abnormal sensor relationships.
+Active Development
 
 ---
 
-# 2. Problem Statement
+# Executive Summary
 
-Traditional OBD-II readers primarily provide:
+AutoAssist is an automotive analytics platform that transforms raw OBD-II telemetry into actionable vehicle intelligence.
 
-* Raw sensor values
-* Diagnostic Trouble Codes (DTCs)
-* Basic live telemetry
+The platform is designed to:
 
-These tools rely on ECU-defined thresholds and typically identify issues only after predefined fault conditions are met.
+* Understand vehicle behavior
+* Classify driving states
+* Detect abnormal operating conditions
+* Generate vehicle health insights
+* Support future real-time vehicle monitoring
 
-There is limited capability for:
-
-* Detecting subtle deviations in sensor behavior
-* Identifying emerging anomalies before DTC generation
-* Understanding multivariate relationships between vehicle sensors
-* Accounting for varying driving contexts
-* Providing health-oriented telemetry analytics
-
-AutoAssist addresses this gap by applying machine learning and automotive domain logic to telemetry streams, enabling deeper interpretation of vehicle operating behavior.
+The long-term objective is to provide drivers, fleet operators, and automotive technicians with explainable vehicle health assessments derived directly from telemetry data.
 
 ---
 
-# 3. Vision
+# Problem Statement
 
-To create an intelligent vehicle telemetry analytics platform capable of learning normal vehicle behavior, identifying anomalies, generating interpretable health insights, and supporting future predictive maintenance workflows using OBD-II sensor data.
+Modern vehicles generate thousands of sensor readings through the OBD-II interface.
+
+However, raw telemetry is difficult to interpret because:
+
+* Sensor values lack behavioral context
+* Early degradation may occur before diagnostic trouble codes (DTCs) appear
+* Large datasets are difficult to analyze manually
+* Existing OBD applications focus primarily on visualization rather than intelligence
+
+There is a need for a system that can transform telemetry into meaningful diagnostics and health insights.
 
 ---
 
-# 4. Product Goals
+# Vision
+
+Create a vehicle intelligence platform capable of:
+
+```text
+Telemetry
+     ↓
+Behavior Understanding
+     ↓
+Anomaly Detection
+     ↓
+Health Assessment
+     ↓
+Actionable Insights
+```
+
+The platform should evolve from offline analysis into real-time vehicle monitoring.
+
+---
+
+# Product Goals
 
 ## Primary Goals
 
-* Analyze OBD-II telemetry datasets
-* Learn normal vehicle operating patterns
-* Detect anomalous sensor behavior
-* Generate vehicle health insights
-* Visualize telemetry trends and anomalies
-* Provide interpretable anomaly scores
-* Minimize false-positive anomaly detection through driving-context awareness
+* Classify driving behavior
+* Detect anomalous operating patterns
+* Generate vehicle health scores
+* Provide explainable analytics
+* Support future live OBD-II streaming
 
 ---
 
 ## Secondary Goals
 
-* Support multiple driving conditions
-* Enable long-term vehicle behavior analysis
-* Create a scalable backend architecture
-* Prepare for future live telemetry integration
-* Establish reusable telemetry analysis pipelines
+* Enable dashboard-based monitoring
+* Support future predictive maintenance
+* Create reusable ML infrastructure
+* Support multiple vehicle types
 
 ---
 
-# 5. Target Users
+# Target Users
+
+## Vehicle Owners
+
+Need:
+
+* Vehicle health visibility
+* Driving behavior insights
+* Early warning indicators
+
+---
 
 ## Automotive Enthusiasts
 
-Users interested in understanding vehicle behavior beyond traditional fault codes.
+Need:
+
+* Telemetry exploration
+* Performance analysis
+* Vehicle behavior understanding
 
 ---
 
-## Students and Researchers
+## Technicians
 
-Individuals studying:
+Need:
 
-* Automotive analytics
-* Vehicle diagnostics
-* Time-series analysis
-* Machine learning applications in transportation
+* Diagnostic assistance
+* Health indicators
+* Behavioral analytics
 
 ---
 
-## Fleet and Maintenance Concepts
+## Fleet Operators
 
-Future adaptation for:
+Future target audience.
+
+Need:
 
 * Fleet health monitoring
-* Predictive maintenance research
-* Vehicle performance analytics
+* Risk detection
+* Maintenance prioritization
 
 ---
 
-# 6. Scope
+# Dataset
 
-## In Scope
+Current development dataset:
 
-### Telemetry Processing
-
-* OBD-II dataset ingestion
-* Dataset validation
-* Dynamic schema mapping
-* Data cleaning
-* Missing value handling
-* Sensor normalization
-* Timestamp processing
-
-### Analytics
-
-* Sensor trend analysis
-* Correlation analysis
-* Driving condition analysis
-* Operational state analysis
-* Statistical feature extraction
-
-### Machine Learning
-
-* Baseline learning
-* Anomaly detection
-* Behavioral pattern analysis
-* Vehicle health scoring
-* Explainable anomaly interpretation
-
-### Visualization
-
-* Interactive dashboards
-* Sensor plots
-* Anomaly visualizations
-* Health indicators
+| Attribute      | Value     |
+| -------------- | --------- |
+| Vehicle        | Seat Leon |
+| Sessions       | 81        |
+| Raw Rows       | 2,693,824 |
+| Clean Rows     | 2,693,087 |
+| Retention Rate | 99.97%    |
 
 ---
 
-## Out of Scope
-
-* ECU tuning
-* Vehicle control systems
-* ECU firmware modification
-* Safety-critical decision making
-* OEM diagnostic replacement
-* Guaranteed fault diagnosis
-* Autonomous vehicle control
-
----
-
-# 7. Functional Requirements
-
-## FR-1 Dataset Upload
-
-The system shall allow users to upload OBD-II telemetry datasets in CSV format.
-
-### Input
-
-CSV telemetry files.
-
-### Output
-
-Validated telemetry records available for processing.
-
-### Validation Requirements
-
-The system shall verify:
-
-* Required telemetry fields are available
-* Sufficient data exists for baseline generation
-* Timestamp continuity is acceptable
-* Dataset quality exceeds minimum thresholds
-
-If baseline requirements are not met, the system shall notify the user and prevent unreliable anomaly assessment.
-
----
-
-## FR-2 Data Preprocessing
-
-The system shall:
-
-* Detect missing values
-* Remove invalid records
-* Normalize numerical features
-* Validate timestamps
-* Standardize telemetry schemas
-* Prepare telemetry data for analysis
-
-### Schema Standardization
-
-The system shall map telemetry fields from various OBD-II logging formats into a canonical internal schema.
-
-Example standardized fields:
-
-* rpm
-* speed
-* throttle_position
-* engine_load
-* coolant_temperature
-* intake_air_temperature
-* maf
-* fuel_trim
-* timestamp
-
-This mapping layer shall enable compatibility across multiple telemetry sources without modifying downstream analytics pipelines.
-
----
-
-## FR-3 Telemetry Analysis
-
-The system shall:
-
-* Analyze sensor behavior over time
-* Generate descriptive statistics
-* Identify significant trends
-* Detect sensor relationships
-* Evaluate operating characteristics
-
-Examples:
-
-* RPM behavior
-* Vehicle speed patterns
-* Engine load variations
-* Temperature trends
-* Throttle response characteristics
-
----
-
-## FR-4 Operational State Classification
-
-The system shall classify telemetry into operational driving states before anomaly analysis.
-
-Example states include:
-
-* Idle
-* Low-speed urban driving
-* Highway cruising
-* Acceleration
-* Deceleration
-* Stop-and-go traffic
-
-The classification output shall be used to provide contextualized anomaly detection and reduce false-positive alerts.
-
----
-
-## FR-5 Feature Engineering
-
-The system shall derive analytical features including:
-
-* Rolling averages
-* Sensor variability metrics
-* Sensor relationships
-* Trend indicators
-* Rate-of-change calculations
-* Context-aware operational features
-* State-specific behavioral indicators
-
-Examples:
-
-* RPM fluctuation rates
-* Load-to-speed relationships
-* Throttle response characteristics
-* Acceleration consistency
-* Temperature stability metrics
-
----
-
-## FR-6 Anomaly Detection
-
-The system shall identify unusual operating behavior based on learned telemetry patterns.
-
-Anomaly evaluation shall be performed relative to the detected operational state rather than a single global baseline.
-
-Outputs:
-
-* Normal
-* Warning
-* Abnormal
-
-Each result shall include an anomaly score.
-
----
-
-## FR-7 Baseline Confidence Assessment
-
-The system shall maintain a confidence score representing the quality and completeness of the learned baseline.
-
-The confidence score shall consider:
-
-* Dataset size
-* Operational state coverage
-* Sensor completeness
-* Data quality
-
-Example outputs:
-
-* Baseline Established
-* Limited Baseline Confidence
-* Insufficient Data
-
-The anomaly detection engine shall use this confidence level when generating assessments.
-
----
-
-## FR-8 Explainable Anomaly Interpretation
-
-The system shall provide interpretable explanations for detected anomalies.
-
-For each anomaly event, the platform shall identify major contributing telemetry features.
-
-Example:
-
-* RPM variability
-* Engine load deviation
-* Throttle inconsistency
-* Temperature abnormalities
-
-The architecture shall support future integration of advanced explainability techniques for deeper model interpretation.
-
----
-
-## FR-9 Vehicle Health Assessment
-
-The system shall generate an overall vehicle health indicator derived from telemetry analysis.
-
-Example:
-
-* Healthy
-* Monitor
-* Attention Required
-
-Health assessment shall consider:
-
-* Anomaly frequency
-* Anomaly severity
-* Sensor stability
-* Behavioral consistency
-
----
-
-## FR-10 Visualization Dashboard
-
-The system shall display:
-
-### Vehicle Metrics
+## Available Sensors
 
 * RPM
 * Speed
-* Engine load
-* Throttle position
-* Temperature-related sensors
-* Airflow-related sensors
-
-### Analytics
-
-* Time-series charts
-* Correlation visualizations
-* Operational state visualizations
-* Anomaly markers
-* Health summaries
+* MAF
+* MAP
+* Coolant Temperature
+* Intake Air Temperature
+* Ambient Temperature
+* Throttle Position
+* Pedal Position D
+* Pedal Position E
 
 ---
 
-## FR-11 Reporting
-
-The system shall provide:
-
-* Anomaly summaries
-* Telemetry insights
-* Operational state summaries
-* Health assessment results
-* Contributing factor analysis
+# Functional Requirements
 
 ---
 
-# 8. Machine Learning Requirements
+## FR-1 Data Ingestion
 
-## Initial Approach
+The system shall:
 
-Unsupervised anomaly detection.
-
-Recommended models:
-
-* Isolation Forest
-* One-Class SVM
-* DBSCAN
-
-Model selection may evolve based on dataset characteristics.
+* Load OBD-II CSV datasets
+* Validate input files
+* Support multiple sessions
+* Handle malformed files gracefully
 
 ---
 
-## Expected Outputs
+## FR-2 Data Standardization
 
-### Anomaly Score
+The system shall:
 
-Continuous score representing deviation from learned behavior.
-
----
-
-### Status Classification
-
-* Normal
-* Warning
-* Abnormal
+* Convert raw column names into a canonical schema
+* Support multiple OBD-II data formats
 
 ---
 
-### Baseline Confidence
+## FR-3 Data Cleaning
 
-Confidence level associated with learned behavior patterns.
+The system shall:
 
----
-
-### Contributing Factors
-
-Identification of telemetry features contributing to abnormal behavior.
-
----
-
-# 9. System Architecture
-
-## Frontend
-
-Technology:
-
-* React Application
-
-Responsibilities:
-
-* Dashboard rendering
-* File upload
-* Data visualization
-* User interaction
+* Remove duplicates
+* Handle missing values
+* Validate sensor ranges
+* Parse timestamps
 
 ---
 
-## Backend
+## FR-4 Session Management
 
-Technology:
+The system shall:
 
-* FastAPI
-
-Responsibilities:
-
-* API layer
-* File handling
-* Data validation
-* Schema mapping
-* Data processing orchestration
-* Model execution
+* Preserve session identity
+* Support fleet-level analytics
+* Generate a unified master dataset
 
 ---
 
-## Analytics Engine
+## FR-5 Driving State Classification
 
-Technology:
+The system shall classify every telemetry record into one of:
 
-* Python
+* Idle
+* Traffic
+* Cruising
+* Acceleration
+* Deceleration
 
-Libraries:
-
-* Pandas
-* NumPy
-* Scikit-learn
-
-Responsibilities:
-
-* Data preparation
-* Operational state classification
-* Feature engineering
-* Baseline learning
-* Anomaly detection
-* Health scoring
-* Explainability generation
+The classifier shall be deterministic and explainable.
 
 ---
 
-## Visualization
+## FR-6 State Analytics
 
-Technology:
+The system shall generate:
 
-* Plotly
-
-Responsibilities:
-
-* Interactive telemetry charts
-* Analytical visualizations
-* Operational state displays
-* Anomaly overlays
+* State counts
+* State percentages
+* Dominant state
+* Aggressive event counts
+* Session summaries
 
 ---
 
-# 10. Non-Functional Requirements
+## FR-7 Feature Engineering
+
+The system shall generate behavioral features including:
+
+```text
+speed_delta
+rpm_delta
+maf_delta
+map_delta
+throttle_delta
+```
+
+These features shall be used by downstream analytics and machine learning components.
+
+---
+
+## FR-8 Anomaly Detection
+
+The system shall identify unusual vehicle behavior patterns.
+
+---
+
+### Research Outcome
+
+Initial project assumptions considered supervised machine learning approaches.
+
+Research demonstrated:
+
+* Reliable anomaly labels do not exist
+* Dataset is dominated by normal driving behavior
+* Supervised anomaly detection is unsuitable
+
+---
+
+### Selected Approach
+
+The anomaly detection system shall use:
+
+```text
+Isolation Forest
+```
+
+as the baseline production anomaly detector.
+
+Reasons:
+
+* Unsupervised learning
+* No anomaly labels required
+* Learns normal vehicle behavior
+* Suitable for large telemetry datasets
+* Compatible with future streaming systems
+
+---
+
+### Outputs
+
+The anomaly detector shall produce:
+
+```text
+anomaly_score
+
+anomaly_flag
+```
+
+for every telemetry observation.
+
+---
+
+## FR-9 Vehicle Health Score
+
+The system shall generate a vehicle health score.
+
+---
+
+### Inputs
+
+Future inputs may include:
+
+* Anomaly density
+* Aggressive events
+* State distributions
+* Session statistics
+
+---
+
+### Output
+
+```text
+Vehicle Health Score
+```
+
+Range:
+
+```text
+0–100
+```
+
+Where:
+
+```text
+100 = Excellent
+0 = Critical
+```
+
+---
+
+## FR-10 Dashboard Integration
+
+The platform shall support a frontend dashboard providing:
+
+* Vehicle Health Score
+* Driving State Analytics
+* Health Timeline
+* Digital Vehicle Twin
+* Anomaly Center
+* Sensor Explorer
+
+---
+
+# Non-Functional Requirements
 
 ## Performance
 
-* Process datasets efficiently
-* Support large telemetry files
-* Maintain responsive dashboard performance
+The system shall process:
+
+```text
+2.6+ million telemetry records
+```
+
+without excessive memory usage.
 
 ---
 
 ## Scalability
 
-Architecture shall support future additions including:
+The architecture shall support:
 
-* Real-time telemetry ingestion
-* Continuous monitoring
-* Multi-vehicle analysis
-* Cloud deployment
+* Larger datasets
+* Multiple vehicles
+* Fleet-scale analytics
+
+---
+
+## Explainability
+
+All major decisions shall be explainable.
+
+Examples:
+
+* State assignments
+* Health score calculations
+* Anomaly detections
 
 ---
 
 ## Maintainability
 
-* Modular backend design
-* Separated analytics layer
-* Reusable machine learning pipeline
-* Extensible schema mapping framework
+The codebase shall:
+
+* Use modular design
+* Follow single responsibility principles
+* Use typed interfaces
+* Use structured reporting
 
 ---
 
-## Reliability
+## Future Compatibility
 
-* Graceful handling of incomplete datasets
-* Robust anomaly detection workflow
-* Consistent API responses
-* Reliable baseline confidence assessment
+The architecture shall support:
 
----
-
-# 11. Future Expansion Roadmap
-
-The platform architecture shall remain compatible with future enhancements.
-
-Potential future capabilities include:
-
-## Live OBD-II Integration
-
-* ELM327 support
-* OBDLink support
-* Bluetooth telemetry acquisition
-* Wi-Fi telemetry acquisition
+* FastAPI deployment
+* Real-time telemetry streams
+* ELM327 integration
+* Predictive maintenance models
 
 ---
 
-## Real-Time Monitoring
+# System Architecture
 
-* Continuous telemetry streaming
-* Live anomaly detection
-* Live health monitoring
-* Streaming analytics
-
----
-
-## Vehicle Profiling
-
-Support for:
-
-* Vehicle-specific baselines
-* Engine-specific operating profiles
-* Vehicle-class normalization
-
----
-
-## Historical Analysis
-
-* Long-term vehicle tracking
-* Trend analysis
-* Behavioral drift detection
+```text
+Raw OBD-II Data
+        ↓
+Preprocessing
+        ↓
+State Classification
+        ↓
+State Analysis
+        ↓
+Feature Engineering
+        ↓
+Isolation Forest
+        ↓
+Health Score Engine
+        ↓
+FastAPI
+        ↓
+Dashboard
+```
 
 ---
 
-## Predictive Maintenance
-
-Potential future research areas:
-
-* Battery degradation indicators
-* Cooling system stress indicators
-* Airflow system anomalies
-* Fuel efficiency degradation trends
-* Sensor degradation analysis
-
----
-
-## Fleet Analytics
-
-Future support for:
-
-* Multiple vehicles
-* Centralized monitoring
-* Comparative health scoring
-
----
-
-# 12. Success Metrics
+# Success Criteria
 
 The project will be considered successful if it can:
 
-* Process OBD-II telemetry datasets successfully
-* Establish reliable operational baselines
-* Detect meaningful anomalous behavior
-* Reduce context-related false positives
-* Generate interpretable anomaly scores
-* Explain contributing anomaly factors
-* Visualize telemetry effectively
-* Deliver actionable vehicle health insights
-* Support future migration toward live OBD-II telemetry monitoring
+### Data Layer
+
+* Process raw OBD-II telemetry reliably
+* Generate a clean master dataset
+
+### Intelligence Layer
+
+* Classify driving states accurately
+* Generate meaningful session analytics
+
+### ML Layer
+
+* Detect unusual behavior patterns
+* Produce anomaly scores
+* Generate health indicators
+
+### Platform Layer
+
+* Expose functionality through APIs
+* Visualize results through the dashboard
 
 ---
 
-# 13. Technology Stack
+# Current Status
 
-Frontend:
+## Completed
 
-* React
+* Dataset Analysis
+* Architecture Design
+* Preprocessing Pipeline
+* State Classification Engine
+* State Analysis Engine
+* Feature Engineering Research
+* Correlation Analysis
+* Feature Importance Analysis
+* PCA Evaluation
+* Isolation Forest Research
 
-Backend:
+---
 
-* FastAPI
+## In Progress
 
-Analytics:
+* Production Feature Engineering Module
+* Production Anomaly Detection Module
+* Health Score Engine
 
-* Python
+---
 
-Data Processing:
+## Planned
 
-* Pandas
-* NumPy
+* Model Training
+* Artifact Generation
+* FastAPI Integration
+* Dashboard Integration
+* Real-Time OBD-II Monitoring
 
-Machine Learning:
+---
 
-* Scikit-learn
+# Long-Term Vision
 
-Visualization:
-
-* Plotly
-
-Storage:
-
-* CSV Datasets
-
-Model Persistence:
-
-* Joblib
+AutoAssist is designed to evolve into a complete automotive intelligence platform capable of monitoring live vehicle telemetry, detecting abnormal behavior, generating explainable health insights, and supporting predictive maintenance through machine learning-driven analytics.
