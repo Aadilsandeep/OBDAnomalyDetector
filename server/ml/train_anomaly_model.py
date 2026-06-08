@@ -200,7 +200,11 @@ def build_training_matrix(df: pd.DataFrame, feature_columns: tuple[str, ...]) ->
             "Verify that FeatureEngineer produced the expected output."
         )
 
-    matrix: pd.DataFrame = df[feature_columns].copy()
+    print(df.columns.tolist())
+    matrix: pd.DataFrame = df.loc[:, list(feature_columns)].copy()
+    logger.info(
+    f"Training matrix shape: {matrix.shape}"
+    )
 
     # 2. Empty matrix
     if matrix.empty:

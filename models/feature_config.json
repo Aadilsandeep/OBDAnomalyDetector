@@ -1,0 +1,14 @@
+{
+  "feature_columns": [
+    "rpm",
+    "speed",
+    "maf",
+    "map",
+    "throttle_pos",
+    "rpm_delta",
+    "speed_delta",
+    "maf_delta",
+    "map_delta",
+    "throttle_delta"
+  ]
+}
