@@ -1,0 +1,6 @@
+state,row_count,anomaly_count,anomaly_rate
+Acceleration,46872,8350,0.1781
+Cruising,1617972,43616,0.027
+Deceleration,45378,5571,0.1228
+Idle,260309,7453,0.0286
+Traffic,722556,17833,0.0247
