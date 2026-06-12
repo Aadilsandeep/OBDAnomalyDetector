@@ -1,4 +1,16 @@
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+/**
+ * @file components/layout/AppLayout.tsx
+ * @description Main application shell — sidebar, top-bar, mobile drawer,
+ * upload dialog, and page content outlet.
+ *
+ * Changes from mock-data version:
+ * - Removed `vehicleInfo` import from mockData.ts
+ * - Dynamic vehicle status from session store (session ID presence)
+ * - Upload dialog button in sidebar footer and top-bar
+ * - SessionStoreProvider wraps the entire layout
+ */
+
+import { Link, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Activity,
@@ -11,9 +23,11 @@ import {
   CircleDot,
   Menu,
   X,
+  Upload,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { vehicleInfo } from "@/lib/mockData";
+import { SessionStoreProvider, useSessionStore } from "@/lib/sessionStore";
+import { UploadCard } from "@/components/ui-kit/UploadCard";
 
 const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -38,8 +52,16 @@ function Logo() {
   );
 }
 
-function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+function Sidebar({
+  onNavigate,
+  onUpload,
+}: {
+  onNavigate?: () => void;
+  onUpload: () => void;
+}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { sessionId } = useSessionStore();
+
   return (
     <aside className="flex h-full w-64 flex-col border-r border-border bg-sidebar">
       <div className="px-5 py-5">
@@ -73,18 +95,41 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </ul>
       </nav>
-      <div className="m-3 rounded-lg border border-border bg-card/60 p-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <CircleDot className="h-3.5 w-3.5 text-success" />
-          Analyzer online
+
+      {/* Sidebar footer */}
+      <div className="m-3 space-y-2">
+        {/* Upload button */}
+        <button
+          id="sidebar-upload-btn"
+          onClick={onUpload}
+          className="flex w-full items-center gap-2 rounded-lg border border-primary/30 bg-primary/8 px-3 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
+        >
+          <Upload className="h-4 w-4" />
+          {sessionId ? "Upload new CSV" : "Upload CSV"}
+        </button>
+
+        {/* Status card */}
+        <div className="rounded-lg border border-border bg-card/60 p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <CircleDot className={`h-3.5 w-3.5 ${sessionId ? "text-success" : "text-muted-foreground"}`} />
+            {sessionId ? "Session active" : "No session"}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">v2.4.1 · build 2611</div>
         </div>
-        <div className="mt-1 text-xs text-muted-foreground">v2.4.1 · build 2611</div>
       </div>
     </aside>
   );
 }
 
-function TopBar({ onMenu }: { onMenu: () => void }) {
+function TopBar({
+  onMenu,
+  onUpload,
+}: {
+  onMenu: () => void;
+  onUpload: () => void;
+}) {
+  const { sessionId } = useSessionStore();
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur md:px-6">
       <button
@@ -97,14 +142,39 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 
       <div className="hidden items-center gap-2 md:flex">
         <Car className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium text-foreground">{vehicleInfo.name}</span>
-        <span className="text-xs text-muted-foreground">· {vehicleInfo.session}</span>
+        <span className="text-sm font-medium text-foreground">
+          {sessionId ? "OBD-II Vehicle" : "AutoAssist"}
+        </span>
+        {sessionId && (
+          <span className="text-xs text-muted-foreground font-mono">
+            · {sessionId.slice(0, 8)}…
+          </span>
+        )}
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <StatusPill icon={<Database className="h-3.5 w-3.5" />} label="Dataset" value={vehicleInfo.datasetStatus} tone="success" />
-        <StatusPill icon={<Activity className="h-3.5 w-3.5" />} label="Analysis" value={vehicleInfo.analysisStatus} tone="primary" />
-        <div className="ml-2 flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-xs font-semibold text-foreground ring-1 ring-border">
+        <StatusPill
+          icon={<Database className="h-3.5 w-3.5" />}
+          label="Dataset"
+          value={sessionId ? "Loaded" : "None"}
+          tone={sessionId ? "success" : "warning"}
+        />
+        <StatusPill
+          icon={<Activity className="h-3.5 w-3.5" />}
+          label="Analysis"
+          value={sessionId ? "Complete" : "Pending"}
+          tone={sessionId ? "primary" : "warning"}
+        />
+        <button
+          id="topbar-upload-btn"
+          onClick={onUpload}
+          className="ml-1 hidden items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-elevated sm:flex"
+          aria-label="Upload CSV file"
+        >
+          <Upload className="h-3.5 w-3.5 text-primary" />
+          Upload
+        </button>
+        <div className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-xs font-semibold text-foreground ring-1 ring-border">
           AK
         </div>
       </div>
@@ -113,8 +183,16 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 }
 
 function StatusPill({
-  icon, label, value, tone,
-}: { icon: ReactNode; label: string; value: string; tone: "success" | "primary" | "warning" }) {
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  tone: "success" | "primary" | "warning";
+}) {
   const toneClass = {
     success: "text-success ring-success/30 bg-success/10",
     primary: "text-primary ring-primary/30 bg-primary/10",
@@ -129,12 +207,57 @@ function StatusPill({
   );
 }
 
-export function AppLayout() {
+// ---------------------------------------------------------------------------
+// Upload Dialog (portal-less modal overlay)
+// ---------------------------------------------------------------------------
+
+function UploadDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Upload OBD-II CSV"
+    >
+      <UploadCard
+        onDismiss={onClose}
+        onSuccess={() => {
+          onClose();
+          router.navigate({ to: "/" });
+        }}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Inner layout (needs session store context)
+// ---------------------------------------------------------------------------
+
+function AppLayoutInner() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const openUpload = () => setUploadOpen(true);
+  const closeUpload = () => setUploadOpen(false);
+
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
       <div className="hidden lg:block">
-        <Sidebar />
+        <Sidebar onUpload={openUpload} />
       </div>
 
       {mobileOpen && (
@@ -148,22 +271,44 @@ export function AppLayout() {
             >
               <X className="h-5 w-5" />
             </button>
-            <Sidebar onNavigate={() => setMobileOpen(false)} />
+            <Sidebar onNavigate={() => setMobileOpen(false)} onUpload={() => { setMobileOpen(false); openUpload(); }} />
           </div>
         </div>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar onMenu={() => setMobileOpen(true)} />
+        <TopBar onMenu={() => setMobileOpen(true)} onUpload={openUpload} />
         <main className="flex-1 px-4 py-6 md:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>
+
+      <UploadDialog open={uploadOpen} onClose={closeUpload} />
     </div>
   );
 }
 
-export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
+// ---------------------------------------------------------------------------
+// Exported AppLayout — wraps children in SessionStoreProvider
+// ---------------------------------------------------------------------------
+
+export function AppLayout() {
+  return (
+    <SessionStoreProvider>
+      <AppLayoutInner />
+    </SessionStoreProvider>
+  );
+}
+
+export function PageHeader({
+  title,
+  description,
+  actions,
+}: {
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>

@@ -1,40 +1,135 @@
+/**
+ * @file routes/anomalies.tsx
+ * @description Anomaly Center page — anomaly timeline, heatmap, severity
+ * distribution chart, event detail table, and contributing factor display.
+ *
+ * Data source: `GET /api/sessions/{session_id}/anomalies` via `useAnomalies()`.
+ *
+ * Schema notes:
+ * - Backend `AnomalyEvent` has `anomalyScore: float` instead of a `factors[]` array.
+ *   The contributing factors panel is adapted to display a single "Anomaly Score" bar.
+ * - `severity_distribution` colors come directly from the backend and map to CSS vars.
+ */
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
+  BarChart,
+  Bar,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Cell,
 } from "recharts";
 import { Panel, PanelHeader, PanelBody, Badge } from "@/components/ui-kit/Card";
 import { PageHeader } from "@/components/layout/AppLayout";
-import {
-  anomalies, heatmap, heatmapGroups, heatmapTimeBuckets, severityDistribution, type Severity,
-} from "@/lib/mockData";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui-kit/StateViews";
+import { useAnomalies } from "@/hooks/useAnomalies";
+import { useSessionStore } from "@/lib/sessionStore";
 import { AlertTriangle } from "lucide-react";
+import type { AnomalyEvent } from "@/api/types";
 
 export const Route = createFileRoute("/anomalies")({
   head: () => ({
     meta: [
       { title: "Anomaly Center — AutoAssist" },
-      { name: "description", content: "Investigate anomalies, severities and contributing factors across the session." },
+      {
+        name: "description",
+        content:
+          "Investigate anomalies, severities and contributing factors across the session.",
+      },
     ],
   }),
   component: AnomalyPage,
 });
 
-const sevTone: Record<Severity, "neutral" | "success" | "warning" | "critical" | "primary"> = {
-  Low: "success", Medium: "primary", High: "warning", Critical: "critical",
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+type SeverityTone = "neutral" | "success" | "warning" | "critical" | "primary";
+
+const sevTone: Record<string, SeverityTone> = {
+  Low: "success",
+  Medium: "primary",
+  High: "warning",
+  Critical: "critical",
 };
 
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 function AnomalyPage() {
-  const [selectedId, setSelectedId] = useState(anomalies[3].id);
-  const selected = anomalies.find((a) => a.id === selectedId)!;
+  const { sessionId } = useSessionStore();
+  const { data, isLoading, isError, error, refetch } = useAnomalies();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // -- No session -----------------------------------------------------------
+  if (!sessionId) {
+    return (
+      <div>
+        <PageHeader title="Anomaly Center" description="Upload an OBD-II CSV to begin" />
+        <EmptyState />
+      </div>
+    );
+  }
+
+  // -- Loading ---------------------------------------------------------------
+  if (isLoading) {
+    return (
+      <div>
+        <PageHeader title="Anomaly Center" description="Loading anomaly data…" />
+        <LoadingState label="Fetching anomaly data…" />
+      </div>
+    );
+  }
+
+  // -- Error ----------------------------------------------------------------
+  if (isError || !data) {
+    return (
+      <div>
+        <PageHeader title="Anomaly Center" />
+        <ErrorState
+          message={error?.message ?? "Failed to load anomaly data."}
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
+
+  const { anomalies, severityDistribution, heatmap, heatmapGroups, heatmapTimeBuckets } = data;
+
+  // Resolve selected anomaly, defaulting to first critical/high or first in list
+  const resolvedSelectedId =
+    selectedId ??
+    (anomalies.find((a) => a.severity === "Critical")?.id ??
+      anomalies.find((a) => a.severity === "High")?.id ??
+      anomalies[0]?.id ??
+      null);
+  const selected: AnomalyEvent | undefined = anomalies.find(
+    (a) => a.id === resolvedSelectedId,
+  );
   const maxHeat = Math.max(...heatmap.flat(), 1);
+  const totalAnomalies = severityDistribution.reduce((s, b) => s + b.value, 0);
+
+  // Position mapping for timeline dots (distribute evenly)
+  const positions = anomalies.map((_, i) =>
+    anomalies.length > 1 ? Math.round((i / (anomalies.length - 1)) * 90 + 5) : 50,
+  );
 
   return (
     <div>
       <PageHeader
         title="Anomaly Center"
         description="Severity, distribution and contributing factor analysis"
-        actions={<Badge tone="warning"><AlertTriangle className="h-3 w-3" /> 12 detected</Badge>}
+        actions={
+          <Badge tone="warning">
+            <AlertTriangle className="h-3 w-3" /> {totalAnomalies} detected
+          </Badge>
+        }
       />
 
       {/* Timeline */}
@@ -44,21 +139,32 @@ function AnomalyPage() {
           <div className="relative">
             <div className="h-px w-full bg-border" />
             <div className="mt-2 grid grid-cols-12 text-[10px] text-muted-foreground">
-              {Array.from({ length: 12 }).map((_, i) => <div key={i}>{`00:${(i * 10).toString().padStart(2, "0")}`}</div>)}
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i}>{`${String(Math.floor(i / 6)).padStart(2, "0")}:${String((i % 6) * 10).padStart(2, "0")}`}</div>
+              ))}
             </div>
             <div className="relative mt-3 h-16">
               {anomalies.map((a, i) => {
-                const positions = [8, 22, 44, 60, 78];
-                const pos = positions[i % positions.length];
-                const tone = a.severity === "Critical" ? "var(--critical)" :
-                             a.severity === "High" ? "var(--warning)" :
-                             a.severity === "Medium" ? "var(--primary)" : "var(--success)";
-                const active = a.id === selectedId;
+                const tone =
+                  a.severity === "Critical"
+                    ? "var(--critical)"
+                    : a.severity === "High"
+                      ? "var(--warning)"
+                      : a.severity === "Medium"
+                        ? "var(--primary)"
+                        : "var(--success)";
+                const active = a.id === resolvedSelectedId;
                 return (
                   <button
                     key={a.id}
                     onClick={() => setSelectedId(a.id)}
-                    style={{ left: `${pos}%`, backgroundColor: tone, boxShadow: active ? `0 0 0 4px color-mix(in oklab, ${tone} 30%, transparent)` : undefined }}
+                    style={{
+                      left: `${positions[i]}%`,
+                      backgroundColor: tone,
+                      boxShadow: active
+                        ? `0 0 0 4px color-mix(in oklab, ${tone} 30%, transparent)`
+                        : undefined,
+                    }}
                     className={`absolute top-1 h-4 w-4 -translate-x-1/2 rounded-full ring-2 ring-background transition-transform hover:scale-125 ${active ? "scale-125" : ""}`}
                     title={`${a.id} · ${a.severity}`}
                   />
@@ -72,30 +178,43 @@ function AnomalyPage() {
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Heatmap */}
         <Panel className="lg:col-span-2">
-          <PanelHeader title="Anomaly Heatmap" subtitle="Concentration across sensor groups and time" />
+          <PanelHeader
+            title="Anomaly Heatmap"
+            subtitle="Concentration across sensor groups and time"
+          />
           <PanelBody>
             <div className="overflow-x-auto">
               <table className="w-full border-separate border-spacing-1 text-xs">
                 <thead>
                   <tr>
-                    <th></th>
+                    <th />
                     {heatmapTimeBuckets.map((t) => (
-                      <th key={t} className="px-1 text-[10px] font-medium text-muted-foreground">{t}</th>
+                      <th key={t} className="px-1 text-[10px] font-medium text-muted-foreground">
+                        {t}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {heatmapGroups.map((g, i) => (
                     <tr key={g}>
-                      <td className="pr-2 text-right text-[11px] font-medium text-muted-foreground">{g}</td>
-                      {heatmap[i].map((v, j) => {
+                      <td className="pr-2 text-right text-[11px] font-medium text-muted-foreground">
+                        {g}
+                      </td>
+                      {(heatmap[i] ?? []).map((v, j) => {
                         const intensity = v / maxHeat;
                         return (
-                          <td key={j} className="h-9 min-w-10 rounded-md text-center text-[10px] font-semibold text-foreground"
-                              style={{
-                                background: `color-mix(in oklab, var(--primary) ${intensity * 70}%, var(--elevated))`,
-                                color: intensity > 0.5 ? "var(--primary-foreground)" : "var(--muted-foreground)",
-                              }}>
+                          <td
+                            key={j}
+                            className="h-9 min-w-10 rounded-md text-center text-[10px] font-semibold text-foreground"
+                            style={{
+                              background: `color-mix(in oklab, var(--primary) ${intensity * 70}%, var(--elevated))`,
+                              color:
+                                intensity > 0.5
+                                  ? "var(--primary-foreground)"
+                                  : "var(--muted-foreground)",
+                            }}
+                          >
                             {v > 0 ? v : ""}
                           </td>
                         );
@@ -107,25 +226,55 @@ function AnomalyPage() {
             </div>
             <div className="mt-4 flex items-center gap-3 text-[11px] text-muted-foreground">
               <span>Low</span>
-              <div className="h-2 w-40 rounded" style={{ background: "linear-gradient(90deg, var(--elevated), var(--primary))" }} />
+              <div
+                className="h-2 w-40 rounded"
+                style={{
+                  background: "linear-gradient(90deg, var(--elevated), var(--primary))",
+                }}
+              />
               <span>High</span>
             </div>
           </PanelBody>
         </Panel>
 
-        {/* Severity */}
+        {/* Severity distribution */}
         <Panel>
           <PanelHeader title="Severity Distribution" />
           <PanelBody>
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={severityDistribution} margin={{ left: -20, right: 8 }}>
-                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 4" vertical={false} />
-                  <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
+                  <CartesianGrid
+                    stroke="var(--border)"
+                    strokeDasharray="3 4"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="name"
+                    stroke="var(--muted-foreground)"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="var(--muted-foreground)"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--popover)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                  />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                    {severityDistribution.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    {severityDistribution.map((d, i) => (
+                      <Cell key={i} fill={d.color} />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -133,7 +282,10 @@ function AnomalyPage() {
             <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
               {severityDistribution.map((s) => (
                 <div key={s.name} className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />
+                  <span
+                    className="h-2.5 w-2.5 rounded-sm"
+                    style={{ background: s.color }}
+                  />
                   <span className="text-muted-foreground">{s.name}</span>
                   <span className="ml-auto font-medium text-foreground">{s.value}</span>
                 </div>
@@ -146,65 +298,129 @@ function AnomalyPage() {
       {/* Detail + Contributing factors */}
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
         <Panel className="lg:col-span-2">
-          <PanelHeader
-            title={`Anomaly ${selected.id}`}
-            subtitle={`${selected.time} · ${selected.state}`}
-            right={<Badge tone={sevTone[selected.severity]}>{selected.severity}</Badge>}
-          />
-          <PanelBody>
-            <p className="text-sm text-foreground">{selected.description}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {selected.sensors.map((s) => <Badge key={s} tone="primary">{s}</Badge>)}
-            </div>
-            <div className="mt-5">
-              <div className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">All anomalies</div>
-              <div className="overflow-hidden rounded-lg border border-border">
-                <table className="w-full text-sm">
-                  <thead className="bg-elevated/40 text-xs uppercase tracking-wider text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium">ID</th>
-                      <th className="px-3 py-2 text-left font-medium">Time</th>
-                      <th className="px-3 py-2 text-left font-medium">Severity</th>
-                      <th className="px-3 py-2 text-left font-medium">State</th>
-                      <th className="px-3 py-2 text-left font-medium">Sensors</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {anomalies.map((a) => (
-                      <tr key={a.id}
-                          onClick={() => setSelectedId(a.id)}
-                          className={`cursor-pointer border-t border-border hover:bg-elevated/40 ${a.id === selectedId ? "bg-primary/5" : ""}`}>
-                        <td className="px-3 py-2 font-mono text-xs text-foreground">{a.id}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{a.time}</td>
-                        <td className="px-3 py-2"><Badge tone={sevTone[a.severity]}>{a.severity}</Badge></td>
-                        <td className="px-3 py-2 text-muted-foreground">{a.state}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{a.sensors.join(", ")}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </PanelBody>
+          {selected ? (
+            <>
+              <PanelHeader
+                title={`Anomaly ${selected.id}`}
+                subtitle={`${selected.time} · ${selected.state}`}
+                right={
+                  <Badge tone={sevTone[selected.severity] ?? "neutral"}>
+                    {selected.severity}
+                  </Badge>
+                }
+              />
+              <PanelBody>
+                <p className="text-sm text-foreground">{selected.description}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {selected.sensors.map((s) => (
+                    <Badge key={s} tone="primary">
+                      {s}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="mt-5">
+                  <div className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    All anomalies
+                  </div>
+                  <div className="overflow-hidden rounded-lg border border-border">
+                    <table className="w-full text-sm">
+                      <thead className="bg-elevated/40 text-xs uppercase tracking-wider text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">ID</th>
+                          <th className="px-3 py-2 text-left font-medium">Time</th>
+                          <th className="px-3 py-2 text-left font-medium">Severity</th>
+                          <th className="px-3 py-2 text-left font-medium">State</th>
+                          <th className="px-3 py-2 text-left font-medium">Sensors</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {anomalies.map((a) => (
+                          <tr
+                            key={a.id}
+                            onClick={() => setSelectedId(a.id)}
+                            className={`cursor-pointer border-t border-border hover:bg-elevated/40 ${a.id === resolvedSelectedId ? "bg-primary/5" : ""}`}
+                          >
+                            <td className="px-3 py-2 font-mono text-xs text-foreground">
+                              {a.id}
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">{a.time}</td>
+                            <td className="px-3 py-2">
+                              <Badge tone={sevTone[a.severity] ?? "neutral"}>
+                                {a.severity}
+                              </Badge>
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">{a.state}</td>
+                            <td className="px-3 py-2 text-muted-foreground">
+                              {a.sensors.join(", ")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </PanelBody>
+            </>
+          ) : (
+            <PanelBody>
+              <p className="text-sm text-muted-foreground">No anomalies detected.</p>
+            </PanelBody>
+          )}
         </Panel>
 
         <Panel>
-          <PanelHeader title="Contributing Factors" subtitle="Per-factor contribution to anomaly score" />
+          <PanelHeader
+            title="Anomaly Score"
+            subtitle="Composite ML anomaly score for selected event"
+          />
           <PanelBody>
-            <div className="space-y-4">
-              {selected.factors.map((f) => (
-                <div key={f.name}>
+            {selected ? (
+              <div className="space-y-4">
+                <div>
                   <div className="mb-1.5 flex items-center justify-between text-xs">
-                    <span className="font-medium text-foreground">{f.name}</span>
-                    <span className="text-muted-foreground">{f.weight}%</span>
+                    <span className="font-medium text-foreground">Anomaly Score</span>
+                    <span className="text-muted-foreground">
+                      {(selected.anomalyScore * 100).toFixed(1)}%
+                    </span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-elevated">
-                    <div className="h-full rounded-full bg-primary"
-                         style={{ width: `${f.weight}%`, boxShadow: "0 0 8px color-mix(in oklab, var(--primary) 60%, transparent)" }} />
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{
+                        width: `${Math.min(100, selected.anomalyScore * 100)}%`,
+                        boxShadow:
+                          "0 0 8px color-mix(in oklab, var(--primary) 60%, transparent)",
+                      }}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="rounded-lg border border-border bg-elevated/30 px-3 py-3 text-xs text-muted-foreground">
+                  <div className="font-medium text-foreground">Event Details</div>
+                  <div className="mt-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Severity</span>
+                      <span className="font-medium text-foreground">{selected.severity}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>State</span>
+                      <span className="font-medium text-foreground">{selected.state}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Time</span>
+                      <span className="font-medium text-foreground">{selected.time}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Sensors involved</span>
+                      <span className="font-medium text-foreground">
+                        {selected.sensors.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Select an anomaly to view details.</p>
+            )}
           </PanelBody>
         </Panel>
       </div>
