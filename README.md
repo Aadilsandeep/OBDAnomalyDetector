@@ -1,52 +1,53 @@
-# OBD-II Vehicle Health Monitoring & Anomaly Detection Platform
+# AutoAssist 🚗
 
-AutoAssist is an automotive analytics platform designed to transform raw OBD-II telemetry into actionable vehicle intelligence.
+### AI-Powered OBD-II Vehicle Health Monitoring & Anomaly Detection Platform
 
-The system processes vehicle sensor data, classifies driving behavior, detects anomalous operating conditions, and generates vehicle health insights. The architecture is designed to evolve from offline analysis of historical datasets to real-time monitoring using live OBD-II data streams.
+AutoAssist is an end-to-end vehicle telemetry analytics platform that uses OBD-II sensor data, machine learning, and interactive visualizations to detect abnormal vehicle behavior, assess vehicle health, and provide actionable insights through a modern web dashboard.
 
----
-
-# Project Goal
-
-Modern vehicles continuously generate large volumes of sensor data through the OBD-II interface.
-
-AutoAssist aims to:
-
-* Understand driving behavior
-* Classify vehicle operating states
-* Detect abnormal vehicle behavior
-* Generate vehicle health indicators
-* Support future real-time vehicle monitoring
-* Provide explainable analytics for diagnostics and maintenance
+The project combines data engineering, anomaly detection, health scoring, backend APIs, and frontend analytics into a complete vehicle monitoring system.
 
 ---
 
-# Current Project Status
+## Dashboard Preview
 
-## Phase 1 — Foundation & Data Platform ✅
+### Dashboard
 
-Completed:
+![Dashboard](docs/screenshots/dashboard.jpg)
 
-* Product Requirements Definition (PRD)
-* System Architecture Design
-* Dataset Analysis
-* Frontend Dashboard Design
-* Data Preprocessing Pipeline
-* Session Merging Pipeline
+### Anomaly Center
+
+![Anomalies](docs/screenshots/anomalies.jpg)
+
+### Telemetry Explorer
+
+![Telemetry](docs/screenshots/telemetry.jpg)
+
+### Reports
+
+![Reports](docs/screenshots/reports.jpg)
 
 ---
 
-## Phase 2 — Vehicle State Intelligence ✅
+# Features
 
-Completed:
+## Vehicle Health Monitoring
 
-* State Definitions
-* Rule-Based State Classification Engine
-* State Analysis Engine
-* Session-Level State Analytics
-* Aggressive Event Detection
+* Vehicle health score generation
+* Risk level classification
+* Session-level vehicle assessment
+* Health trend analysis
 
-Supported driving states:
+## Anomaly Detection
+
+* Isolation Forest based anomaly detection
+* Sensor behavior analysis
+* Per-record anomaly scoring
+* Binary anomaly classification
+* Session anomaly summaries
+
+## Driving State Classification
+
+Automatically classifies telemetry into:
 
 * Idle
 * Traffic
@@ -54,149 +55,195 @@ Supported driving states:
 * Acceleration
 * Deceleration
 
----
+## Interactive Analytics Dashboard
 
-## Phase 3 — ML Research & Model Selection ✅
+* Health overview
+* Telemetry visualization
+* Sensor exploration
+* Anomaly investigation
+* Session reports
+* Correlation analysis
 
-Completed:
+## CSV-Based Workflow
 
-* Correlation Analysis
-* Feature Engineering Research
-* Feature Importance Analysis
-* PCA Evaluation
-* Isolation Forest Evaluation
-* Model Selection
-
-Key outcome:
-
-* Isolation Forest selected as the production anomaly detection model.
-
----
-
-## Phase 4 — Production ML Pipeline 🚧
-
-Currently in progress:
-
-* Production Feature Engineering Module
-* Production Anomaly Detection Module
-* Health Score Engine
-
----
-
-# Dataset Information
-
-| Attribute         | Value     |
-| ----------------- | --------- |
-| Vehicle           | Seat Leon |
-| Sessions          | 81        |
-| Raw Rows          | 2,693,824 |
-| Clean Rows        | 2,693,087 |
-| Retention Rate    | 99.97%    |
-| Sensor Parameters | 11        |
-
----
-
-# Available Sensors
-
-The dataset contains the following OBD-II telemetry parameters:
-
-* Engine RPM
-* Vehicle Speed
-* Mass Air Flow (MAF)
-* Intake Manifold Pressure (MAP)
-* Intake Air Temperature (IAT)
-* Coolant Temperature
-* Ambient Temperature
-* Throttle Position
-* Accelerator Pedal Position D
-* Accelerator Pedal Position E
-* Timestamp
-
-Each record is associated with a driving session through:
-
-```text
-session_id
-```
+* Upload vehicle telemetry datasets
+* Automatic preprocessing
+* Feature engineering
+* Anomaly analysis
+* Health assessment generation
 
 ---
 
 # System Architecture
 
 ```text
-Raw OBD-II Data
-        │
-        ▼
-Loader
-        │
-        ▼
-Standardizer
-        │
-        ▼
-Cleaner
-        │
-        ▼
-Merger
-        │
-        ▼
-Master Dataset
-        │
-        ▼
-State Classifier
-        │
-        ▼
-State Analyzer
-        │
-        ▼
+CSV Upload
+     │
+     ▼
+Preprocessing Pipeline
+     │
+     ▼
+State Classification
+     │
+     ▼
 Feature Engineering
-        │
-        ▼
-Isolation Forest
-        │
-        ▼
+     │
+     ▼
+Isolation Forest Model
+     │
+     ▼
+Anomaly Detection
+     │
+     ▼
 Health Score Engine
-        │
-        ▼
+     │
+     ▼
 FastAPI Backend
-        │
-        ▼
-Frontend Dashboard
+     │
+     ▼
+React Dashboard
 ```
+
+---
+
+# Machine Learning Pipeline
+
+## Feature Engineering
+
+The platform generates engineered features from raw OBD-II telemetry:
+
+* RPM Delta
+* Speed Delta
+* MAF Delta
+* MAP Delta
+* Throttle Delta
+
+### Input Features
+
+```text
+rpm
+speed
+maf
+map
+throttle_pos
+rpm_delta
+speed_delta
+maf_delta
+map_delta
+throttle_delta
+```
+
+---
+
+## Model
+
+Algorithm:
+
+```python
+IsolationForest(
+    n_estimators=200,
+    contamination="auto",
+    random_state=42
+)
+```
+
+### Model Artifacts
+
+```text
+models/
+├── isolation_forest.pkl
+├── scaler.pkl
+└── feature_config.json
+```
+
+---
+
+# Validation Results
+
+Validation performed on:
+
+```text
+2,693,087 telemetry records
+```
+
+### Overall Performance
+
+| Metric               | Value     |
+| -------------------- | --------- |
+| Total Records        | 2,693,087 |
+| Total Anomalies      | 82,823    |
+| Overall Anomaly Rate | 3.08%     |
+
+### Driving State Analysis
+
+| Driving State | Anomaly Rate |
+| ------------- | ------------ |
+| Idle          | 2.86%        |
+| Traffic       | 2.47%        |
+| Cruising      | 2.70%        |
+| Acceleration  | 17.81%       |
+| Deceleration  | 12.28%       |
+
+### Key Findings
+
+* Acceleration and deceleration states exhibit significantly higher anomaly rates due to transient vehicle dynamics.
+* Steady-state driving (traffic, cruising, idle) maintains consistent low anomaly rates.
+* The model learned a compact normal driving region with minimal anomaly inflation.
+
+---
+
+# Technology Stack
+
+## Backend
+
+* Python 3.11+
+* FastAPI
+* Pandas
+* NumPy
+* Scikit-Learn
+* Joblib
+* Pydantic
+
+## Frontend
+
+* React
+* TypeScript
+* TanStack Start
+* TanStack Router
+* React Query
+* Tailwind CSS
+* Recharts
+
+## Machine Learning
+
+* Isolation Forest
+* StandardScaler
+* Custom Feature Engineering Pipeline
 
 ---
 
 # Project Structure
 
 ```text
-OBDAnomalyDetector
+OBDAnomalyDetector/
 │
 ├── client/
+│   ├── routes/
+│   ├── components/
+│   ├── hooks/
+│   └── api/
 │
 ├── server/
-│   │
 │   ├── preprocessing/
-│   │   ├── loader.py
-│   │   ├── standardizer.py
-│   │   ├── cleaner.py
-│   │   ├── merger.py
-│   │   └── preprocess.py
-│   │
 │   ├── analytics/
-│   │   ├── state_definitions.py
-│   │   ├── state_classifier.py
-│   │   └── state_analyzer.py
-│   │
-│   └── ml/
-│       ├── feature_engineering.py
-│       ├── anomaly_detector.py
-│       └── health_score.py
-│
-├── data/
-│   ├── raw/
-│   └── processed/
-│
-├── notebooks/
+│   ├── ml/
+│   └── api/
 │
 ├── models/
+│
+├── data/
+│
+├── reports/
 │
 ├── docs/
 │
@@ -205,326 +252,189 @@ OBDAnomalyDetector
 
 ---
 
-# Data Processing Pipeline
+# Running Locally
 
-The preprocessing layer transforms raw OBD-II logs into a unified master dataset.
+## Clone Repository
 
-### Loader
+```bash
+git clone https://github.com/AadilSandeep/OBDAnomalyDetector.git
 
-Responsibilities:
-
-* CSV ingestion
-* Dataset discovery
-* Validation
-* Error handling
-
-### Standardizer
-
-Converts raw sensor names into a canonical schema.
-
-Example:
-
-```text
-Engine RPM [RPM]
-        ↓
-rpm
-```
-
-### Cleaner
-
-Performs:
-
-* Duplicate removal
-* Missing value handling
-* Timestamp validation
-* Sensor range validation
-
-### Merger
-
-Combines all driving sessions into a single dataset while preserving session identity.
-
-### Preprocessor
-
-Orchestrates the complete preprocessing workflow.
-
-```text
-Load
- ↓
-Standardize
- ↓
-Clean
- ↓
-Merge
- ↓
-Master Dataset
+cd OBDAnomalyDetector
 ```
 
 ---
 
-# Driving State Classification
+## Backend Setup
 
-The platform uses a deterministic rule-based state machine to label vehicle behavior.
+Install dependencies:
 
-States:
-
-* Idle
-* Traffic
-* Cruising
-* Acceleration
-* Deceleration
-
-The classifier currently uses:
-
-* Speed
-* RPM
-* Speed Delta
-* RPM Delta
-
-to classify each telemetry sample.
-
-Current state distribution:
-
-| State        | Percentage |
-| ------------ | ---------- |
-| Cruising     | 60.08%     |
-| Traffic      | 26.83%     |
-| Idle         | 9.66%      |
-| Acceleration | 1.74%      |
-| Deceleration | 1.69%      |
-
----
-
-# State Analysis
-
-The state analysis engine generates:
-
-* State counts
-* State percentages
-* Session-level statistics
-* Dominant driving state
-* Aggressive event counts
-
-Example outputs:
-
-* Dominant state across dataset
-* Driving style characterization
-* Session behavior summaries
-
----
-
-# Feature Engineering
-
-Current engineered features:
-
-```text
-speed_delta
-rpm_delta
-maf_delta
-map_delta
-throttle_delta
+```bash
+pip install -r requirements.txt
 ```
 
-These features capture vehicle dynamics and behavioral changes between consecutive telemetry readings.
+Run FastAPI:
 
----
+```bash
+uvicorn server.api.main:app --reload
+```
 
-# Research Findings
-
-## Correlation Analysis
-
-Strong relationships identified:
+Backend URL:
 
 ```text
-RPM ↔ Speed ≈ 0.83
-MAF ↔ MAP ≈ 0.87
+http://localhost:8000
+```
+
+Swagger Documentation:
+
+```text
+http://localhost:8000/docs
 ```
 
 ---
 
-## Feature Importance Analysis
+## Frontend Setup
 
-Most informative behavioral features:
+```bash
+cd client
 
-```text
-speed_delta
-rpm_delta
+npm install
+
+npm run dev
 ```
 
-These features consistently dominated feature importance rankings.
-
----
-
-## PCA Evaluation
-
-Principal Component Analysis was evaluated to determine whether dimensionality reduction was beneficial.
-
-Results:
-
-* 95% variance retained with 8 principal components
-* Original feature space contained 10 features
-
-Conclusion:
+Frontend URL:
 
 ```text
-PCA was not adopted.
-```
-
-The dimensionality reduction benefit did not justify the loss of interpretability.
-
----
-
-# Anomaly Detection Research
-
-Several approaches were evaluated.
-
-## Why Not Supervised Learning?
-
-The dataset primarily contains normal driving behavior.
-
-Reliable anomaly labels do not exist.
-
-Therefore:
-
-```text
-Supervised anomaly detection
-was rejected.
+http://localhost:3000
 ```
 
 ---
 
-## Selected Model
+# Supported Dataset Requirements
+
+The current version expects telemetry containing the following core signals:
 
 ```text
-Isolation Forest
+RPM
+Vehicle Speed
+Mass Air Flow (MAF)
+Manifold Absolute Pressure (MAP)
+Throttle Position
 ```
 
-Reasons:
-
-* Unsupervised learning
-* No anomaly labels required
-* Effective on large telemetry datasets
-* Learns normal driving behavior
-* Suitable for real-world deployment
-
-Research findings showed:
-
-* Acceleration and Deceleration states exhibit the highest anomaly rates.
-* Idle exhibits the lowest anomaly rate.
-* Isolation Forest captures behavioral deviations rather than simple statistical outliers.
+Datasets using different column names may require updates to the preprocessing mapping configuration.
 
 ---
 
-# Frontend Dashboard
+# Current Limitations
 
-Planned dashboard components include:
-
-### Vehicle Health Score
-
-Overall vehicle condition indicator.
-
-### Digital Vehicle Twin
-
-Subsystem health visualization.
-
-### Health Timeline
-
-Historical vehicle health trends.
-
-### Driving State Analytics
-
-State distribution and behavior analysis.
-
-### Anomaly Center
-
-Anomaly investigation dashboard.
-
-### Sensor Explorer
-
-Sensor correlation and telemetry analysis tools.
+* Requires a supported OBD-II telemetry schema
+* Designed for offline CSV analysis
+* No direct OBD-II hardware integration yet
+* No fault-code (DTC) interpretation
+* No real-time telemetry streaming
 
 ---
 
-# Technology Stack
+# Future Scope
 
-## Data Processing
+## Dataset Flexibility
 
-* Python
-* Pandas
-* NumPy
+* Automatic schema detection
+* Alias-based column mapping
+* Support for multiple OBD-II dataset formats
 
-## Machine Learning
+## Real-Time OBD-II Integration
 
-* Scikit-Learn
-* Isolation Forest
-* PCA
-* Random Forest (Research Only)
+Planned support for:
 
-## Backend
+* ELM327 Bluetooth Dongles
+* ELM327 Wi-Fi Dongles
+* Live vehicle telemetry streaming
 
-* FastAPI
+### Future Architecture
 
-## Frontend
+```text
+Vehicle
+    │
+    ▼
+OBD-II Dongle
+    │
+    ▼
+Live Telemetry Stream
+    │
+    ▼
+AutoAssist
+    │
+    ▼
+Real-Time Health Monitoring
+```
 
-* React
-* TypeScript
-* Tailwind CSS
-* Lovable
+## Real-Time Health Monitoring
 
-## Visualization
+Future versions aim to provide:
 
-* Matplotlib
-* Recharts
+* Live anomaly detection
+* Streaming health scores
+* Driver alerts
+* Continuous health tracking
 
----
+## Diagnostic Intelligence
 
-# Current Progress
+Future research direction:
 
-| Module                      | Status         |
-| --------------------------- | -------------- |
-| Documentation               | ✅ Complete     |
-| Dataset Analysis            | ✅ Complete     |
-| Preprocessing Pipeline      | ✅ Complete     |
-| Master Dataset Generation   | ✅ Complete     |
-| State Classification Engine | ✅ Complete     |
-| State Analysis Engine       | ✅ Complete     |
-| Correlation Analysis        | ✅ Complete     |
-| Feature Importance Analysis | ✅ Complete     |
-| PCA Evaluation              | ✅ Complete     |
-| Isolation Forest Research   | ✅ Complete     |
-| Feature Engineering Module  | 🚧 In Progress |
-| Anomaly Detection Module    | 🚧 In Progress |
-| Health Score Engine         | 🚧 In Progress |
-| FastAPI Integration         | ⏳ Planned      |
-| Frontend Integration        | ⏳ Planned      |
+```text
+Anomaly Detection
+        │
+        ▼
+Diagnostic Engine
+        │
+        ▼
+Root Cause Suggestions
+```
 
----
+Potential capabilities:
 
-# Future Roadmap
-
-## Short-Term
-
-* Production Feature Engineering Module
-* Production Isolation Forest Pipeline
-* Vehicle Health Score Engine
-
-## Mid-Term
-
-* FastAPI Backend
-* Health APIs
-* Session Analysis APIs
-
-## Long-Term
-
-* Live OBD-II Streaming
-* ELM327 Integration
-* Real-Time Vehicle Monitoring
-* Predictive Maintenance
-* Fleet Analytics
+* Airflow anomaly detection
+* Sensor drift identification
+* Intake system monitoring
+* Early fault prediction
 
 ---
 
-# Vision
+# Project Status
 
-AutoAssist is designed to evolve into a complete vehicle intelligence platform capable of transforming raw OBD-II telemetry into meaningful, explainable, and actionable automotive insights.
+### Version
 
-The long-term goal is to provide real-time vehicle monitoring, anomaly detection, health scoring, and predictive maintenance support through a scalable ML-powered architecture.
+```text
+v1.0 MVP
+```
+
+### Completed
+
+* Data preprocessing pipeline
+* Driving state classification
+* Feature engineering
+* Model training
+* Anomaly detection
+* Health score engine
+* Validation pipeline
+* FastAPI backend
+* React frontend
+* End-to-end CSV analysis workflow
+
+---
+
+# License
+
+This project was developed for academic, research, and educational purposes.
+
+---
+
+# Author
+
+**Aadil Sandeep**
+
+Computer Science Engineering
+
+Vehicle Analytics • Machine Learning • Automotive AI
